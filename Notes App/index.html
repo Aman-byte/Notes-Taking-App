@@ -104,7 +104,7 @@
     }
     .dark-mode .editor {
       border-color: #555;
-      color: #000000;
+      background-color: #ffffff;
     }
     h1 {
       font-size: 1.5rem;
@@ -134,7 +134,6 @@
     .ql-editor [style*="background-color"] {
       padding: 2px;
     }
-    /* Toolbar styling */
     .ql-snow .ql-toolbar {
       background-color: #ffffff;
       border-color: #ccc;
@@ -184,13 +183,13 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      background-color: #000000; /* Black background in light mode */
-      color: #ffffff; /* White icon for visibility */
+      background-color: #000000;
+      color: #ffffff;
       font-size: 1.2rem;
     }
     .dark-mode .theme-toggle {
-      background-color: #ffffff; /* White background in dark mode */
-      color: #000000; /* Black icon for visibility */
+      background-color: #ffffff;
+      color: #000000;
     }
   </style>
 </head>
@@ -208,22 +207,20 @@
       const quillRef = useRef(null);
       const editorRef = useRef(null);
 
-      // Ensure body class is set on initial render
+      // Register custom background colors
       useEffect(() => {
-        document.body.className = `${theme}-mode`;
-      }, [theme]);
+        if (typeof Quill !== 'undefined') {
+          const Background = Quill.import('attributors/style/background');
+          const Color = Quill.import('attributors/style/color');
+          Quill.register(Background, true);
+          Quill.register(Color, true);
+        }
+      }, []);
 
-      // Toggle theme
-      const toggleTheme = () => {
-        setTheme(prev => {
-          const newTheme = prev === 'light' ? 'dark' : 'light';
-          return newTheme;
-        });
-      };
-
-      // Initialize Quill editor with highlighter
+      // Initialize Quill editor
       useEffect(() => {
         if (!quillRef.current && editorRef.current) {
+          console.log('Initializing Quill editor');
           quillRef.current = new Quill(editorRef.current, {
             theme: 'snow',
             modules: {
@@ -237,34 +234,28 @@
             }
           });
           quillRef.current.on('text-change', () => {
-            if (isEditing && selectedNote) {
+            if (isEditing || title) {
+              console.log('Text changed, updating notes');
               setNotes(prev => ({
                 ...prev,
-                [selectedNote]: quillRef.current.root.innerHTML
+                [title || selectedNote]: quillRef.current.root.innerHTML
               }));
             }
           });
         }
-
-        // Cleanup Quill instance on unmount
         return () => {
           if (quillRef.current) {
+            console.log('Cleaning up Quill editor');
+            quillRef.current.off('text-change');
             quillRef.current = null;
           }
         };
       }, []);
 
-      // Update editor content when selectedNote or isEditing changes
+      // Update body class for theme
       useEffect(() => {
-        if (quillRef.current) {
-          if (selectedNote && notes[selectedNote]) {
-            quillRef.current.root.innerHTML = notes[selectedNote];
-          } else {
-            quillRef.current.root.innerHTML = '';
-          }
-          quillRef.current.enable(isEditing || !selectedNote);
-        }
-      }, [selectedNote, isEditing, notes]);
+        document.body.className = `${theme}-mode`;
+      }, [theme]);
 
       // Load notes from localStorage
       useEffect(() => {
@@ -277,35 +268,54 @@
         localStorage.setItem('notes', JSON.stringify(notes));
       }, [notes]);
 
-      // Handle note selection
-      const handleSelectNote = (e) => {
-        const title = e.target.value;
-        setSelectedNote(title);
-        setTitle(title);
+      // Update editor content
+      useEffect(() => {
+        if (quillRef.current) {
+          console.log('Updating editor content, selectedNote:', selectedNote, 'isEditing:', isEditing);
+          if (selectedNote && notes[selectedNote] && !isEditing) {
+            quillRef.current.root.innerHTML = notes[selectedNote];
+            quillRef.current.enable(false);
+          } else if (title || isEditing) {
+            quillRef.current.root.innerHTML = notes[selectedNote] || '';
+            quillRef.current.enable(true);
+          } else {
+            quillRef.current.root.innerHTML = '';
+            quillRef.current.enable(true);
+          }
+        }
+      }, [selectedNote, isEditing, notes, title]);
+
+      const toggleTheme = () => {
+        setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
       };
 
-      // Handle save note
+      const handleSelectNote = (e) => {
+        const title = e.target.value;
+        console.log('Selected note:', title);
+        setSelectedNote(title);
+        setTitle(title);
+        setIsEditing(false);
+      };
+
       const handleSave = () => {
         if (title && quillRef.current && quillRef.current.root.innerHTML) {
+          console.log('Saving note:', title);
           setNotes(prev => ({
             ...prev,
             [title]: quillRef.current.root.innerHTML
           }));
           setSelectedNote(title);
-          quillRef.current.enable(false);
           setIsEditing(false);
         }
       };
 
-      // Handle edit mode
       const handleEdit = () => {
         if (selectedNote && quillRef.current) {
-          quillRef.current.enable(true);
+          console.log('Entering edit mode for:', selectedNote);
           setIsEditing(true);
         }
       };
 
-      // Export notes to a file with the note title
       const exportNotes = () => {
         const exportTitle = title || selectedNote || 'note';
         const sanitizedTitle = exportTitle.replace(/[^a-zA-Z0-9]/g, '_');
@@ -320,7 +330,6 @@
         URL.revokeObjectURL(url);
       };
 
-      // Import notes from multiple files
       const importNotes = async () => {
         try {
           const input = document.createElement('input');
