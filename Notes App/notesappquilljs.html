@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Note Taking App</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.10/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .light-mode {
+      background-color: #ffffff;
+      color: #000000;
+    }
+    .dark-mode {
+      background-color: #000000;
+      color: #ffffff;
+    }
+    .container {
+      padding: 16px;
+      transition: background-color 0.3s, color 0.3s, border 0.3s;
+      border: 1px solid #000000;
+    }
+    .light-mode .container {
+      background-color: #ffffff;
+      border: 1px solid #000000;
+    }
+    .dark-mode .container {
+      background-color: #1a1a1a;
+      border: none;
+    }
+    .input-field {
+      border: 1px solid #ccc;
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 8px;
+      background-color: #ffffff;
+      color: #000000;
+      box-sizing: border-box;
+    }
+    .dark-mode .input-field {
+      border-color: #555;
+      background-color: #2a2a2a;
+      color: #ffffff;
+    }
+    .select-field {
+      border: 1px solid #ccc;
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 8px;
+      background-color: #ffffff;
+      color: #000000;
+      box-sizing: border-box;
+    }
+    .dark-mode .select-field {
+      border-color: #555;
+      background-color: #2a2a2a;
+      color: #ffffff;
+    }
+    .button {
+      padding: 8px 16px;
+      margin-right: 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+    }
+    .button-container {
+      margin-bottom: 16px;
+    }
+    .save-button {
+      background-color: #3b82f6;
+    }
+    .edit-button {
+      background-color: #10b981;
+    }
+    .export-button {
+      background-color: #8b5cf6;
+    }
+    .import-button {
+      background-color: #f59e0b;
+    }
+    .disabled-button {
+      background-color: #d1d5db;
+      cursor: not-allowed;
+    }
+    .dark-mode .disabled-button {
+      background-color: #555;
+    }
+    .editor {
+      border: 1px solid #ccc;
+      height: 400px;
+      background-color: #ffffff;
+      color: #000000;
+    }
+    .dark-mode .editor {
+      border-color: #555;
+      background-color: #ffffff;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .ql-snow .ql-picker.ql-background .ql-picker-item {
+      width: 24px;
+      height: 24px;
+      margin: 2px;
+    }
+    .ql-snow .ql-picker.ql-background .ql-picker-item[data-value="yellow"] {
+      background-color: #FFFF00 !important;
+    }
+    .ql-snow .ql-picker.ql-background .ql-picker-item[data-value="red"] {
+      background-color: #FF0000 !important;
+    }
+    .ql-snow .ql-picker.ql-background .ql-picker-item[data-value="green"] {
+      background-color: #00FF00 !important;
+    }
+    .ql-snow .ql-picker.ql-background .ql-picker-item[data-value="blue"] {
+      background-color: #0000FF !important;
+    }
+    .ql-snow .ql-picker.ql-background .ql-picker-item[data-value="pink"] {
+      background-color: #FF69B4 !important;
+    }
+    .ql-editor [style*="background-color"] {
+      padding: 2px;
+    }
+    .ql-snow .ql-toolbar {
+      background-color: #ffffff;
+      border-color: #ccc;
+    }
+    .dark-mode .ql-snow .ql-toolbar {
+      background-color: #2a2a2a;
+      border-color: #555;
+    }
+    .ql-snow .ql-toolbar button,
+    .ql-snow .ql-toolbar .ql-picker-label {
+      color: #000000;
+    }
+    .dark-mode .ql-snow .ql-toolbar button,
+    .dark-mode .ql-snow .ql-toolbar .ql-picker-label {
+      color: #ffffff;
+    }
+    .ql-snow .ql-toolbar button svg,
+    .ql-snow .ql-toolbar .ql-picker-label svg {
+      fill: #000000;
+      stroke: #000000;
+    }
+    .dark-mode .ql-snow .ql-toolbar button svg,
+    .dark-mode .ql-snow .ql-toolbar .ql-picker-label svg {
+      fill: #ffffff;
+      stroke: #ffffff;
+    }
+    .ql-snow .ql-toolbar button:hover,
+    .ql-snow .ql-toolbar .ql-picker-label:hover,
+    .ql-snow .ql-toolbar .ql-picker-item:hover {
+      color: #3b82f6;
+    }
+    .dark-mode .ql-snow .ql-toolbar button:hover,
+    .dark-mode .ql-snow .ql-toolbar .ql-picker-label:hover,
+    .dark-mode .ql-snow .ql-toolbar .ql-picker-item:hover {
+      color: #60a5fa;
+    }
+    .dark-mode .ql-snow .ql-toolbar button:hover svg,
+    .dark-mode .ql-snow .ql-toolbar .ql-picker-label:hover svg {
+      fill: #60a5fa;
+      stroke: #60a5fa;
+    }
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #000000;
+      color: #ffffff;
+      font-size: 1.2rem;
+    }
+    .dark-mode .theme-toggle {
+      background-color: #ffffff;
+      color: #000000;
+    }
+  </style>
+</head>
+<body className="light-mode">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const NoteApp = () => {
+      const [notes, setNotes] = useState({});
+      const [selectedNote, setSelectedNote] = useState('');
+      const [title, setTitle] = useState('');
+      const [isEditing, setIsEditing] = useState(false);
+      const [theme, setTheme] = useState('light');
+      const quillRef = useRef(null);
+      const editorRef = useRef(null);
+
+      // Register custom background colors
+      useEffect(() => {
+        if (typeof Quill !== 'undefined') {
+          const Background = Quill.import('attributors/style/background');
+          const Color = Quill.import('attributors/style/color');
+          Quill.register(Background, true);
+          Quill.register(Color, true);
+        }
+      }, []);
+
+      // Initialize Quill editor
+      useEffect(() => {
+        if (!quillRef.current && editorRef.current) {
+          console.log('Initializing Quill editor');
+          quillRef.current = new Quill(editorRef.current, {
+            theme: 'snow',
+            modules: {
+              toolbar: [
+                [{ 'header': [1, 2, false] }],
+                ['bold', 'italic', 'underline'],
+                [{ 'background': ['yellow', 'red', 'green', 'blue', 'pink', false] }],
+                ['image', 'table'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+              ]
+            }
+          });
+          quillRef.current.on('text-change', () => {
+            if (isEditing || title) {
+              console.log('Text changed, updating notes');
+              setNotes(prev => ({
+                ...prev,
+                [title || selectedNote]: quillRef.current.root.innerHTML
+              }));
+            }
+          });
+        }
+        return () => {
+          if (quillRef.current) {
+            console.log('Cleaning up Quill editor');
+            quillRef.current.off('text-change');
+            quillRef.current = null;
+          }
+        };
+      }, []);
+
+      // Update body class for theme
+      useEffect(() => {
+        document.body.className = `${theme}-mode`;
+      }, [theme]);
+
+      // Load notes from localStorage
+      useEffect(() => {
+        const savedNotes = JSON.parse(localStorage.getItem('notes') || '{}');
+        setNotes(savedNotes);
+      }, []);
+
+      // Save notes to localStorage
+      useEffect(() => {
+        localStorage.setItem('notes', JSON.stringify(notes));
+      }, [notes]);
+
+      // Update editor content
+      useEffect(() => {
+        if (quillRef.current) {
+          console.log('Updating editor content, selectedNote:', selectedNote, 'isEditing:', isEditing);
+          if (selectedNote && notes[selectedNote] && !isEditing) {
+            quillRef.current.root.innerHTML = notes[selectedNote];
+            quillRef.current.enable(false);
+          } else if (title || isEditing) {
+            quillRef.current.root.innerHTML = notes[selectedNote] || '';
+            quillRef.current.enable(true);
+          } else {
+            quillRef.current.root.innerHTML = '';
+            quillRef.current.enable(true);
+          }
+        }
+      }, [selectedNote, isEditing, notes, title]);
+
+      const toggleTheme = () => {
+        setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+      };
+
+      const handleSelectNote = (e) => {
+        const title = e.target.value;
+        console.log('Selected note:', title);
+        setSelectedNote(title);
+        setTitle(title);
+        setIsEditing(false);
+      };
+
+      const handleSave = () => {
+        if (title && quillRef.current && quillRef.current.root.innerHTML) {
+          console.log('Saving note:', title);
+          setNotes(prev => ({
+            ...prev,
+            [title]: quillRef.current.root.innerHTML
+          }));
+          setSelectedNote(title);
+          setIsEditing(false);
+        }
+      };
+
+      const handleEdit = () => {
+        if (selectedNote && quillRef.current) {
+          console.log('Entering edit mode for:', selectedNote);
+          setIsEditing(true);
+        }
+      };
+
+      const exportNotes = () => {
+        const exportTitle = title || selectedNote || 'note';
+        const sanitizedTitle = exportTitle.replace(/[^a-zA-Z0-9]/g, '_');
+        const content = selectedNote && notes[selectedNote] ? notes[selectedNote] : quillRef.current?.root.innerHTML || '';
+        const dataStr = JSON.stringify({ [exportTitle]: content }, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${sanitizedTitle}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const importNotes = async () => {
+        try {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.multiple = true;
+          input.accept = '.json';
+          input.onchange = async (event) => {
+            const files = event.target.files;
+            if (files.length > 0) {
+              const newNotes = { ...notes };
+              for (const file of files) {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                const noteTitle = Object.keys(data)[0] || file.name.replace('.json', '');
+                newNotes[noteTitle] = data[noteTitle] || '';
+              }
+              setNotes(newNotes);
+              localStorage.setItem('notes', JSON.stringify(newNotes));
+            }
+          };
+          input.click();
+        } catch (error) {
+          console.error('Error importing notes:', error);
+        }
+      };
+
+      return (
+        <div className="container">
+          <h1>Note Taking App</h1>
+          <div>
+            <input
+              type="text"
+              placeholder="Enter note title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input-field"
+            />
+            <select
+              value={selectedNote}
+              onChange={handleSelectNote}
+              className="select-field"
+            >
+              <option value="">Select a note</option>
+              {Object.keys(notes).map((noteTitle) => (
+                <option key={noteTitle} value={noteTitle}>
+                  {noteTitle}
+                </option>
+              ))}
+            </select>
+            <div className="button-container">
+              <button
+                onClick={handleSave}
+                className="button save-button"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleEdit}
+                disabled={!selectedNote}
+                className={`button ${selectedNote ? 'edit-button' : 'disabled-button'}`}
+              >
+                Edit
+              </button>
+              <button
+                onClick={exportNotes}
+                className="button export-button"
+              >
+                Export Notes
+              </button>
+              <button
+                onClick={importNotes}
+                className="button import-button"
+              >
+                Import Notes
+              </button>
+            </div>
+          </div>
+          <div ref={editorRef} className="editor"></div>
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+          >
+            {theme === 'light' ? '☀️' : '🌙'}
+          </button>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<NoteApp />);
+  </script>
+</body>
+</html>
