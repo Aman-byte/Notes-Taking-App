@@ -27,3 +27,6 @@
 - Use lexical which is better than Quill.js possibly, Quill.js is dead, No updates by developers 
 - Couldn't be able to make this is lexical because of importing lexical issues.
 
+**Update**
+- New index html has summernotes instead of quill js
+- handles table more efficiently.
