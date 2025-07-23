@@ -30,3 +30,4 @@
 **Update**
 - New index html has summernotes instead of quill js
 - handles table more efficiently.
+- Can handles images as well.
