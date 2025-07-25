@@ -1,6 +1,7 @@
 # Notes Taking App
 
 ### Note-Taking Application Overview
+Go to the folder to test it out.
 
 **Technologies Used**:
 - HTML5: Structure
