@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Note Taking App (Full Undo + Table Fix)</title>
+
+  <!-- React + Babel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.10/babel.min.js"></script>
+
+  <!-- jQuery, Bootstrap, Popper -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Summernote -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .light-mode {
+      background-color: #ffffff;
+      color: #000000;
+    }
+
+    .dark-mode {
+      background-color: #000000;
+      color: #ffffff;
+    }
+
+    .container {
+      width: 95%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px;
+      border: 1px solid #000;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    .input-field, .select-field {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+      background-color: inherit;
+      color: inherit;
+      border: 1px solid #ccc;
+    }
+
+    .input-field::placeholder {
+      color: #888;
+    }
+
+    .dark-mode .input-field,
+    .dark-mode .select-field {
+      background-color: #222;
+      color: #fff;
+      border: 1px solid #555;
+    }
+
+    .button-container button {
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    .editor {
+      margin-top: 16px;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 5px;
+      background: #000;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .dark-mode .theme-toggle {
+      background-color: #fff;
+      color: #000;
+    }
+
+    /* Dark mode for Summernote editor */
+    .dark-mode .note-editor.note-frame {
+      background-color: #1e1e1e;
+      color: #ffffff;
+    }
+
+    .dark-mode .note-editable {
+      background-color: #1e1e1e !important;
+      color: #ffffff !important;
+    }
+
+    .dark-mode .note-toolbar {
+      background-color: #2c2c2c !important;
+      border-color: #444 !important;
+    }
+
+    .dark-mode .note-editor .dropdown-menu {
+      background-color: #2c2c2c;
+      color: #ffffff;
+    }
+
+    .dark-mode .note-editor .dropdown-menu .dropdown-item {
+      color: #ffffff;
+    }
+
+    .dark-mode .note-editor .dropdown-menu .dropdown-item:hover {
+      background-color: #3a3a3a;
+    }
+
+    .note-editable img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .note-editable {
+      overflow-y: auto;
+      min-height: 500px;
+      padding-bottom: 100px;
+    }
+  </style>
+</head>
+
+<body class="light-mode">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const NoteApp = () => {
+      const [notes, setNotes] = useState({});
+      const [selectedNote, setSelectedNote] = useState('');
+      const [title, setTitle] = useState('');
+      const [isEditing, setIsEditing] = useState(true);
+      const [theme, setTheme] = useState('light');
+      const editorRef = useRef(null);
+
+      useEffect(() => {
+        const saved = JSON.parse(localStorage.getItem('notes') || '{}');
+        setNotes(saved);
+
+        $(editorRef.current).summernote({
+          height: 500,
+          minHeight: 300,
+          maxHeight: 1000,
+          placeholder: 'Write your note here...',
+          callbacks: {
+            onChange: (contents) => {
+              // Move cursor out of table
+              if (contents.trim().endsWith('</table>')) {
+                const updatedContent = contents + '<p><br></p>';
+                $(editorRef.current).summernote('code', updatedContent);
+              }
+
+              if (isEditing || title) {
+                setNotes((prev) => ({
+                  ...prev,
+                  [title || selectedNote]: contents,
+                }));
+              }
+            },
+            onImageUpload: function(files) {
+              for (let i = 0; i < files.length; i++) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                  $(editorRef.current).summernote('insertImage', e.target.result, 'pasted image');
+                };
+                reader.readAsDataURL(files[i]);
+              }
+            }
+          }
+        });
+
+        // Add better undo support (record history on each keypress)
+        $(editorRef.current).on('keyup', function (e) {
+          if (!e.ctrlKey && !e.metaKey && e.key.length === 1) {
+            $(editorRef.current).summernote('history.record');
+          }
+        });
+
+        return () => {
+          $(editorRef.current).summernote('destroy');
+        };
+      }, []);
+
+      useEffect(() => {
+        localStorage.setItem('notes', JSON.stringify(notes));
+      }, [notes]);
+
+      useEffect(() => {
+        document.body.className = `${theme}-mode`;
+      }, [theme]);
+
+      useEffect(() => {
+        const content = notes[selectedNote] || '';
+        $(editorRef.current).summernote('code', content);
+
+        if (!selectedNote && !title) {
+          $(editorRef.current).summernote('code', '');
+        }
+
+        if (selectedNote && !isEditing) {
+          $(editorRef.current).summernote('disable');
+        } else {
+          $(editorRef.current).summernote('enable');
+        }
+      }, [selectedNote, isEditing]);
+
+      const toggleTheme = () => {
+        setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+      };
+
+      const handleSelectNote = (e) => {
+        setSelectedNote(e.target.value);
+        setTitle(e.target.value);
+        setIsEditing(false);
+      };
+
+      const handleEdit = () => {
+        if (selectedNote) {
+          setIsEditing(true);
+        }
+      };
+
+      const handleSaveAndReplace = () => {
+        const content = $(editorRef.current).summernote('code');
+        const noteKey = title || selectedNote;
+        if (noteKey && content) {
+          const updatedNotes = {
+            ...notes,
+            [noteKey]: content
+          };
+          setNotes(updatedNotes);
+          setSelectedNote(noteKey);
+          setIsEditing(false);
+          localStorage.setItem('notes', JSON.stringify(updatedNotes));
+          downloadNotes(noteKey, updatedNotes[noteKey]);
+        }
+      };
+
+      const downloadNotes = (title, content) => {
+        const sanitized = title.replace(/[^a-zA-Z0-9]/g, '_');
+        const data = JSON.stringify({ [title]: content }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${sanitized}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const importNotes = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.multiple = true;
+        input.onchange = async (event) => {
+          const files = event.target.files;
+          const newNotes = { ...notes };
+          for (const file of files) {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const key = Object.keys(data)[0];
+            newNotes[key] = data[key];
+          }
+          setNotes(newNotes);
+        };
+        input.click();
+      };
+
+      const addParagraphBelow = () => {
+        $(editorRef.current).summernote('pasteHTML', '<p><br></p>');
+      };
+
+      return (
+        <div className="container">
+          <h1>Note Taking App</h1>
+          <input
+            className="input-field"
+            type="text"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setIsEditing(true);
+            }}
+            placeholder="Enter note title"
+          />
+          <select className="select-field" value={selectedNote} onChange={handleSelectNote}>
+            <option value="">Select a note</option>
+            {Object.keys(notes).map((key) => (
+              <option key={key} value={key}>{key}</option>
+            ))}
+          </select>
+          <div className="button-container">
+            <button onClick={handleSaveAndReplace} className="btn btn-primary">
+              Save and Replace (Download)
+            </button>
+            <button onClick={handleEdit} disabled={!selectedNote} className="btn btn-success">Edit</button>
+            <button onClick={importNotes} className="btn btn-warning">Import Notes</button>
+            <button onClick={addParagraphBelow} className="btn btn-secondary">Add Paragraph Below</button>
+          </div>
+          <div ref={editorRef} className="editor" />
+          <button onClick={toggleTheme} className="theme-toggle">
+            {theme === 'light' ? '☀️' : '🌙'}
+          </button>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<NoteApp />);
+  </script>
+</body>
+</html>
